@@ -1,5 +1,6 @@
 import gdsfactory as gf
 import gplugins as gp
+import lumapi
 
 # Define a tapered ellipse unit cell using gplugins
 def create_tapered_ellipse_unit_cell(radius_x, radius_y, taper_factor, height=0.5):
