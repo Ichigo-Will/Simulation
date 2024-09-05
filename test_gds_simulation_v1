@@ -1,0 +1,83 @@
+import gdsfactory as gf
+import gplugins as gp
+
+# Define a tapered ellipse unit cell using gplugins
+def create_tapered_ellipse_unit_cell(radius_x, radius_y, taper_factor, height=0.5):
+    """Create a tapered ellipse unit cell with gplugins."""
+    c = gf.Component()
+    
+    # Use gplugins for more advanced manipulations
+    taper = gp.taper(taper_factor=taper_factor)
+    
+    # Create the ellipse and apply the taper
+    ellipse = gf.components.ellipse(radii=(radius_x, radius_y), layer=(1, 0))
+    slab = gf.components.rectangle(size=(radius_x * 2, height), layer=(1, 0))
+    
+    tapered_ellipse = taper(ellipse)
+    c.add(tapered_ellipse)
+    c.add(slab)
+    
+    return c
+
+# Create a nanobeam using the tapered cells
+def create_tapered_nanobeam(
+    n_constant_structures=35,
+    n_tapered_structures=16,
+    lattice_constant=0.48,
+    radius_x=0.28,
+    radius_y=0.28,
+    taper_factor=0.5,
+):
+    """Create a nanobeam structure with a tapered section using gplugins."""
+    nanobeam = gf.Component("tapered_nanobeam")
+
+    # Add constant structures
+    for i in range(n_constant_structures):
+        unit_cell = create_tapered_ellipse_unit_cell(radius_x, radius_y, 1)
+        nanobeam.add_ref(unit_cell).movex(i * lattice_constant)
+
+    # Add tapered section using gplugins tapering
+    for i in range(n_tapered_structures):
+        taper_x = radius_x * (1 - taper_factor * (i / n_tapered_structures))
+        taper_y = radius_y * (1 - taper_factor * (i / n_tapered_structures))
+        tapered_cell = create_tapered_ellipse_unit_cell(taper_x, taper_y, taper_factor)
+        nanobeam.add_ref(tapered_cell).movex((i + n_constant_structures) * lattice_constant)
+
+    return nanobeam
+
+def optimize_nanobeam_geometry(nanobeam, taper_factor_range):
+    """Optimize the nanobeam geometry using gplugins."""
+    best_taper = None
+    best_performance = float('inf')  # Placeholder for optimization criterion
+
+    # Loop over possible taper factors to optimize
+    for taper_factor in taper_factor_range:
+        # Create a new nanobeam with the current taper factor
+        test_nanobeam = create_tapered_nanobeam(taper_factor=taper_factor)
+
+        # Simulate or analyze performance using gplugins or a simulation tool
+        performance = simulate_nanobeam(test_nanobeam)  # Custom simulation function
+        
+        # Update the best taper if performance improves
+        if performance < best_performance:
+            best_performance = performance
+            best_taper = taper_factor
+    
+    return best_taper, best_performance
+
+def simulate_nanobeam(nanobeam):
+    """Placeholder function to simulate nanobeam performance."""
+    # Here, you can integrate with your simulation tool (Tidy3D, Lumerical, etc.)
+    # For example, you can run the simulation and return some performance metric.
+    performance = np.random.random()  # Replace with real simulation
+    return performance
+
+nanobeam = create_tapered_nanobeam()
+taper_factor_range = np.linspace(0.2, 0.8, 10)
+best_taper, best_performance = optimize_nanobeam_geometry(nanobeam, taper_factor_range)
+
+# Export the optimized structure
+nanobeam_optimized = create_tapered_nanobeam(taper_factor=best_taper)
+nanobeam_optimized.write_gds("optimized_nanobeam.gds")
+
+print(f"Optimized taper factor: {best_taper}, Performance: {best_performance}")
